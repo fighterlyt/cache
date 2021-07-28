@@ -55,6 +55,15 @@ func NewService(logger log.Logger, redisAddr, password string, redisDB int) (tar
 	}, nil
 }
 
+func NewServiceByRedisClient(logger log.Logger, client *redis.Client) (target *service, err error) {
+	return &service{
+		logger:      logger,
+		lock:        &sync.RWMutex{},
+		types:       make(map[string]*typeInfo, initCapacity),
+		redisClient: client,
+	}, nil
+}
+
 func (s *service) Register(t Type, expireTime time.Duration, kind Kind) (Client, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
