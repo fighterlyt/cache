@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -103,6 +104,8 @@ func (c client) Get(key string) (record interface{}, err error) {
 	switch x := value.(type) {
 	case []byte:
 		return record, json.Unmarshal(x, record)
+	case string:
+		return record, json.NewDecoder(strings.NewReader(x)).Decode(record)
 	default:
 		return value, nil
 	}
