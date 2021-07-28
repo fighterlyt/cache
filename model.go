@@ -110,6 +110,7 @@ func DBLoad(db *gorm.DB, field, operator, prefix string, convert Convert, newFun
 	if field == `` {
 		field = `id`
 	}
+
 	if operator == `` {
 		operator = `=`
 	}
@@ -121,7 +122,7 @@ func DBLoad(db *gorm.DB, field, operator, prefix string, convert Convert, newFun
 			return nil, errors.New(`key 必须是字符串`)
 		}
 
-		str = strings.TrimPrefix(str, prefix+delimiter)
+		str = strings.TrimPrefix(str, prefix+Delimiter)
 
 		value, err := convert(str)
 

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	delimiter    = `:`
+	Delimiter    = `:`
 	initCapacity = 1000
 )
 
@@ -87,7 +87,7 @@ func (c client) Get(key string) (record interface{}, err error) {
 		value interface{}
 	)
 
-	if value, err = c.cache.Get(bg, c.t.CachePrefix()+delimiter+key); err != nil {
+	if value, err = c.cache.Get(bg, c.t.CachePrefix()+Delimiter+key); err != nil {
 		return nil, errors.Wrap(err, `从redis获取失败`)
 	}
 
@@ -100,7 +100,7 @@ func (c client) Get(key string) (record interface{}, err error) {
 }
 
 func (c client) Invalidate(key string) error {
-	return c.cache.Delete(bg, c.t.CachePrefix()+delimiter+key)
+	return c.cache.Delete(bg, c.t.CachePrefix()+Delimiter+key)
 }
 
 var (
