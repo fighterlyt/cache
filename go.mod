@@ -7,6 +7,7 @@ require (
 	github.com/fighterlyt/gormlogger v0.0.0-20210710051925-f770fcffc740
 	github.com/fighterlyt/log v0.0.0-20210607120019-54cae88916e3
 	github.com/go-redis/redis/v8 v8.11.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/atomic v1.9.0

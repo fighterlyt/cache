@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"github.com/eko/gocache/v2/cache"
+	"github.com/eko/gocache/v2/metrics"
 	"github.com/eko/gocache/v2/store"
 	"github.com/fighterlyt/log"
 	"github.com/go-redis/redis/v8"
+	gocache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 )
 
@@ -56,6 +58,14 @@ func NewService(logger log.Logger, redisAddr, password string, redisDB int) (tar
 	}, nil
 }
 
+/*NewServiceByRedisClient 通过RedisClient生成缓存服务
+参数:
+*	logger	log.Logger   	日志器
+*	client	*redis.Client	redis客户端
+返回值:
+*	target	*service     	结果
+*	err   	error        	错误
+*/
 func NewServiceByRedisClient(logger log.Logger, client *redis.Client) (target *service, err error) {
 	return &service{
 		logger:      logger,
@@ -65,7 +75,7 @@ func NewServiceByRedisClient(logger log.Logger, client *redis.Client) (target *s
 	}, nil
 }
 
-func (s *service) Register(t Type, expireTime time.Duration, kind Kind) (Client, error) {
+func (s *service) Register(t Type, expireTime time.Duration, kind Kind) (result Client, err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -75,12 +85,35 @@ func (s *service) Register(t Type, expireTime time.Duration, kind Kind) (Client,
 
 	s.types[t.CachePrefix()] = newTypeInfo(t, expireTime, kind)
 
+	var (
+		redisCache, goCacheCache *cache.Cache
+		goCacheClient            *gocache.Cache
+		cacheInterface           cache.CacheInterface
+	)
+
+	switch kind {
+	case OnlyRedis:
+		cacheInterface = cache.New(store.NewRedis(s.redisClient, &store.Options{
+			Expiration: expireTime,
+		}))
+	case RedisAndMem:
+		goCacheClient = gocache.New(expireTime, expireTime)
+
+		goCacheCache = cache.New(store.NewGoCache(goCacheClient, nil))
+
+		redisCache = cache.New(store.NewRedis(s.redisClient, &store.Options{
+			Expiration: expireTime,
+		}))
+
+		cacheInterface = cache.NewChain(goCacheCache, redisCache)
+	}
+
+	promMetrics := metrics.NewPrometheus("cache")
+
 	return &client{
 		cache: cache.NewLoadable(func(ctx context.Context, key interface{}) (interface{}, error) {
 			return t.Load(ctx, key)
-		}, cache.New(store.NewRedis(s.redisClient, &store.Options{
-			Expiration: expireTime,
-		}))),
+		}, cache.NewMetric(promMetrics, cacheInterface)),
 		t: t,
 	}, nil
 }

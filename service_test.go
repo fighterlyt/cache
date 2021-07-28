@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"strconv"
@@ -55,11 +56,21 @@ func newService(tb testing.TB) {
 func TestManager_Register(t *testing.T) {
 	TestNewService(t)
 
+	key := `1`
+
+	var (
+		origin interface{}
+		count  = 10000
+	)
+
 	load, err = DBLoad(db.Model(&Currency{}), `id`, ``, `currency`, Int64Convert, func() interface{} {
 		return &Currency{}
 	})
 
 	require.NoError(t, err)
+
+	origin, err = load(context.Background(), key)
+	require.NoError(t, err, `加载`)
 
 	typ, err = NewTypeTmpl(`currency`, load, func() interface{} {
 		return &Currency{}
@@ -67,15 +78,17 @@ func TestManager_Register(t *testing.T) {
 
 	require.NoError(t, err)
 
-	testClient, err = testService.Register(typ, time.Minute, OnlyRedis)
+	testClient, err = testService.Register(typ, time.Minute, RedisAndMem)
 
 	require.NoError(t, err)
 
-	result, err = testClient.Get(`1`)
-	require.NoError(t, err)
-	t.Log(result)
+	for i := 0; i < count; i++ {
+		result, err = testClient.Get(`1`)
+		require.NoError(t, err)
 
-	time.Sleep(time.Second)
+		require.EqualValues(t, origin, result)
+	}
+	t.Log(origin)
 }
 
 func BenchmarkManager_Register(b *testing.B) { //nolint:golint,revive
@@ -95,7 +108,7 @@ func BenchmarkManager_Register(b *testing.B) { //nolint:golint,revive
 
 	require.NoError(b, err)
 
-	testClient, err = testService.Register(typ, time.Minute, OnlyRedis)
+	testClient, err = testService.Register(typ, time.Minute, RedisAndMem)
 
 	require.NoError(b, err)
 
@@ -104,6 +117,7 @@ func BenchmarkManager_Register(b *testing.B) { //nolint:golint,revive
 	b.Run(`使用缓存`, func(b *testing.B) {
 		wg := &sync.WaitGroup{}
 		wg.Add(concurrent)
+		loadCount.Store(0)
 		for j := 0; j < concurrent; j++ {
 			go func() {
 				for i := 0; i < b.N; i++ {
