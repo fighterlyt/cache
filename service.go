@@ -15,6 +15,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	gocache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 const (
@@ -114,13 +115,15 @@ func (s *service) Register(t Type, expireTime time.Duration, kind Kind) (result 
 		cache: cache.NewLoadable(func(ctx context.Context, key interface{}) (interface{}, error) {
 			return t.Load(ctx, key)
 		}, cache.NewMetric(promMetrics, cacheInterface)),
-		t: t,
+		t:      t,
+		logger: s.logger,
 	}, nil
 }
 
 type client struct {
-	cache *cache.LoadableCache
-	t     Type
+	cache  *cache.LoadableCache
+	logger log.Logger
+	t      Type
 }
 
 func (c client) Get(key string) (record interface{}, err error) {
@@ -129,6 +132,8 @@ func (c client) Get(key string) (record interface{}, err error) {
 	var (
 		value interface{}
 	)
+
+	c.logger.Info(`获取缓存`, zap.String(`key`, key))
 
 	if value, err = c.cache.Get(bg, c.t.CachePrefix()+Delimiter+key); err != nil {
 		return nil, errors.Wrap(err, `从redis获取失败`)
