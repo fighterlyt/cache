@@ -93,17 +93,17 @@ func (s *service) Register(t Type, expireTime time.Duration, kind Kind) (result 
 
 	switch kind {
 	case OnlyRedis:
-		cacheInterface = cache.New(store.NewRedis(s.redisClient, &store.Options{
+		cacheInterface = cache.New(NewRedis(s.redisClient, &store.Options{
 			Expiration: expireTime,
-		}))
+		}, s.logger))
 	case RedisAndMem:
 		goCacheClient = gocache.New(expireTime, expireTime)
 
 		goCacheCache = cache.New(store.NewGoCache(goCacheClient, nil))
 
-		redisCache = cache.New(store.NewRedis(s.redisClient, &store.Options{
+		redisCache = cache.New(NewRedis(s.redisClient, &store.Options{
 			Expiration: expireTime,
-		}))
+		}, s.logger))
 
 		cacheInterface = cache.NewChain(goCacheCache, redisCache)
 	}
