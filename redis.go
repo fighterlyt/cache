@@ -8,6 +8,7 @@ import (
 	"github.com/eko/gocache/v2/store"
 	"github.com/fighterlyt/log"
 	"github.com/go-redis/redis/v8"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
 
@@ -71,7 +72,7 @@ func (s *RedisStore) GetWithTTL(ctx context.Context, key interface{}) (interface
 }
 
 // Set defines data in Redis for given key identifier
-func (s *RedisStore) Set(ctx context.Context, key interface{}, value interface{}, options *store.Options) error {
+func (s *RedisStore) Set(ctx context.Context, key, value interface{}, options *store.Options) error {
 	if options == nil {
 		options = s.options
 	}
@@ -105,23 +106,31 @@ func (s *RedisStore) Delete(ctx context.Context, key interface{}) error {
 
 // Invalidate invalidates some cache data in Redis for given options
 func (s *RedisStore) Invalidate(ctx context.Context, options store.InvalidateOptions) error {
+	var (
+		err       error
+		cacheKeys []string
+	)
+
 	if tags := options.TagsValue(); len(tags) > 0 {
 		for _, tag := range tags {
 			tagKey := fmt.Sprintf(RedisTagPattern, tag)
-			cacheKeys, err := s.client.SMembers(ctx, tagKey).Result()
-			if err != nil {
+			if cacheKeys, err = s.client.SMembers(ctx, tagKey).Result(); err != nil {
 				continue
 			}
 
 			for _, cacheKey := range cacheKeys {
-				s.Delete(ctx, cacheKey)
+				if singleErr := s.Delete(ctx, cacheKey); singleErr != nil {
+					err = multierr.Append(err, singleErr)
+				}
 			}
 
-			s.Delete(ctx, tagKey)
+			if singleErr := s.Delete(ctx, tagKey); singleErr != nil {
+				err = multierr.Append(err, singleErr)
+			}
 		}
 	}
 
-	return nil
+	return err
 }
 
 // GetType returns the store type
