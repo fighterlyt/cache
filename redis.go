@@ -3,11 +3,12 @@ package cache
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
+	"math/rand"
 	"time"
 
 	"github.com/eko/gocache/v2/store"
 	"github.com/fighterlyt/log"
-	"github.com/go-redis/redis/v8"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
@@ -77,7 +78,7 @@ func (s *RedisStore) Set(ctx context.Context, key, value interface{}, options *s
 		options = s.options
 	}
 
-	err := s.client.Set(ctx, key.(string), value, options.ExpirationValue()).Err()
+	err := s.client.Set(ctx, key.(string), value, options.ExpirationValue()*time.Duration(rand.Float64()/10+0.9)).Err()
 	if err != nil {
 		s.logger.Error(`Set`, zap.String(`错误`, err.Error()))
 		return err
