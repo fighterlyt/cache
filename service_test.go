@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -200,6 +201,7 @@ func TestManager_RegisterByName(t *testing.T) {
 	require.NoError(t, err)
 
 	result, err = testClient.Get(`ACW`)
+	require.NoError(t, testClient.Invalidate(`ACW`))
 	require.NoError(t, err)
 	t.Log(result)
 
@@ -260,4 +262,10 @@ func (c *currencies) UnmarshalBinary(data []byte) error {
 
 func (c currencies) MarshalBinary() (data []byte, err error) {
 	return json.Marshal(c)
+}
+
+func TestRandDuration(t *testing.T) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	t.Log(r.Float64()/10 + 0.9)
+	t.Log(time.Minute * 5 * time.Duration((r.Float64()/10+0.9)*10000) / 10000)
 }

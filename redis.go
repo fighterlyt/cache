@@ -3,9 +3,10 @@ package cache
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 
 	"github.com/eko/gocache/v2/store"
 	"github.com/fighterlyt/log"
@@ -37,6 +38,7 @@ type RedisStore struct {
 	client  RedisClientInterface
 	options *store.Options
 	logger  log.Logger
+	r       *rand.Rand
 }
 
 // NewRedis creates a new store to Redis instance(s)
@@ -49,6 +51,7 @@ func NewRedis(client RedisClientInterface, options *store.Options, logger log.Lo
 		client:  client,
 		options: options,
 		logger:  logger,
+		r:       rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -78,7 +81,7 @@ func (s *RedisStore) Set(ctx context.Context, key, value interface{}, options *s
 		options = s.options
 	}
 
-	err := s.client.Set(ctx, key.(string), value, options.ExpirationValue()*time.Duration(rand.Float64()/10+0.9)).Err()
+	err := s.client.Set(ctx, key.(string), value, options.ExpirationValue()*time.Duration((s.r.Float64()/10+0.9)*10000)/10000).Err()
 	if err != nil {
 		s.logger.Error(`Set`, zap.String(`错误`, err.Error()))
 		return err
