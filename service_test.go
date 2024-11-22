@@ -119,6 +119,7 @@ func BenchmarkManager_Register(b *testing.B) { //nolint:golint,revive
 		wg := &sync.WaitGroup{}
 		wg.Add(concurrent)
 		loadCount.Store(0)
+
 		for j := 0; j < concurrent; j++ {
 			go func() {
 				for i := 0; i < b.N; i++ {
